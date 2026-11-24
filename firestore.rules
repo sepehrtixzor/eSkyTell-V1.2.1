@@ -1,0 +1,279 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() &&
+             request.auth.token.email == 'sepehrtixzor1@gmail.com' &&
+             request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() ||
+             (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // --- Validation Helpers ---
+    function isValidAppConfig(data) {
+      return data.subscriptionRequired is bool &&
+             (!('monthlyPriceToman' in data) || (data.monthlyPriceToman is int && data.monthlyPriceToman >= 0 && data.monthlyPriceToman <= 1000000000)) &&
+             (!('yearlyPriceToman' in data) || (data.yearlyPriceToman is int && data.yearlyPriceToman >= 0 && data.yearlyPriceToman <= 1000000000)) &&
+             data.monthlyPriceLabel is string && data.monthlyPriceLabel.size() <= 80 &&
+             data.yearlyPriceLabel is string && data.yearlyPriceLabel.size() <= 80 &&
+             data.freeTrialDays is int && data.freeTrialDays >= 0 && data.freeTrialDays <= 365 &&
+             data.paywallMessage is string && data.paywallMessage.size() <= 400 &&
+             (!('paymentUrl' in data) || (data.paymentUrl is string && data.paymentUrl.size() <= 500)) &&
+             (!('bankCards' in data) || (data.bankCards is list && data.bankCards.size() <= 20)) &&
+             (!('cryptoWallets' in data) || (data.cryptoWallets is list && data.cryptoWallets.size() <= 20)) &&
+             data.latestVersionName is string && data.latestVersionName.size() >= 1 && data.latestVersionName.size() <= 32 &&
+             data.latestVersionCode is int && data.latestVersionCode >= 1 && data.latestVersionCode <= 100000 &&
+             (!('updateNotes' in data) || (data.updateNotes is string && data.updateNotes.size() <= 1000)) &&
+             (!('updateUrl' in data) || (data.updateUrl is string && data.updateUrl.size() <= 500)) &&
+             data.forceUpdate is bool &&
+             data.enableDualSim is bool &&
+             data.enableQuickTemplates is bool &&
+             data.enableQuietHours is bool &&
+             data.enableBleGattBridge is bool &&
+             data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128 &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPaymentRequest(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() <= 200 &&
+             data.userDisplayName is string && data.userDisplayName.size() >= 1 && data.userDisplayName.size() <= 100 &&
+             data.requestedTier in ['MONTHLY', 'YEARLY'] &&
+             data.amountToman is int && data.amountToman >= 0 && data.amountToman <= 1000000000 &&
+             data.paymentMethod in ['CARD_TO_CARD', 'CRYPTO', 'GATEWAY'] &&
+             (!('targetAccountLabel' in data) || (data.targetAccountLabel is string && data.targetAccountLabel.size() <= 200)) &&
+             (!('trackingCode' in data) || (data.trackingCode is string && data.trackingCode.size() <= 200)) &&
+             (!('receiptImageBase64' in data) || (data.receiptImageBase64 is string && data.receiptImageBase64.size() <= 450000)) &&
+             ((('trackingCode' in data) && data.trackingCode.size() >= 1) ||
+              (('receiptImageBase64' in data) && data.receiptImageBase64.size() >= 1)) &&
+             (!('userNote' in data) || (data.userNote is string && data.userNote.size() <= 400)) &&
+             data.status in ['PENDING', 'APPROVED', 'REJECTED'] &&
+             (!('adminNote' in data) || (data.adminNote is string && data.adminNote.size() <= 400)) &&
+             (!('reviewedBy' in data) || (data.reviewedBy is string && data.reviewedBy.size() <= 128)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAnnouncement(data) {
+      return data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 600 &&
+             data.category in ['FEATURE', 'UPDATE', 'TIP', 'USSD'] &&
+             (!('actionLabel' in data) || (data.actionLabel is string && data.actionLabel.size() <= 40)) &&
+             (!('actionValue' in data) || (data.actionValue is string && data.actionValue.size() <= 500)) &&
+             data.published is bool &&
+             data.createdBy is string && data.createdBy.size() >= 1 && data.createdBy.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+             (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+             data.sim1Label is string && data.sim1Label.size() >= 1 && data.sim1Label.size() <= 40 &&
+             data.sim2Label is string && data.sim2Label.size() >= 1 && data.sim2Label.size() <= 40 &&
+             data.hasActiveSubscription is bool &&
+             data.subscriptionTier in ['FREE', 'MONTHLY', 'YEARLY', 'LIFETIME'] &&
+             (!('subscriptionExpiresAtMillis' in data) || (data.subscriptionExpiresAtMillis is int && data.subscriptionExpiresAtMillis >= 0 && data.subscriptionExpiresAtMillis <= 9999999999999)) &&
+             (!('renewalNoticeMessage' in data) || (data.renewalNoticeMessage is string && data.renewalNoticeMessage.size() <= 300)) &&
+             (!('renewalNoticeAtMillis' in data) || (data.renewalNoticeAtMillis is int && data.renewalNoticeAtMillis >= 0 && data.renewalNoticeAtMillis <= 9999999999999)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAdminRecord(data) {
+      return data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // --- Collection Rules ---
+
+    // Global app configuration (/app_config/global)
+    match /app_config/{configId} {
+      allow get: if isSignedIn() && isValidId(configId);
+      allow list: if isSignedIn();
+      allow create: if isAdmin() &&
+                       isValidId(configId) &&
+                       incoming().keys().hasAll([
+                         'subscriptionRequired', 'monthlyPriceLabel', 'yearlyPriceLabel',
+                         'freeTrialDays', 'paywallMessage', 'latestVersionName',
+                         'latestVersionCode', 'forceUpdate', 'enableDualSim',
+                         'enableQuickTemplates', 'enableQuietHours', 'enableBleGattBridge',
+                         'updatedBy', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'subscriptionRequired', 'monthlyPriceToman', 'yearlyPriceToman',
+                         'monthlyPriceLabel', 'yearlyPriceLabel',
+                         'freeTrialDays', 'paywallMessage', 'paymentUrl',
+                         'bankCards', 'cryptoWallets',
+                         'latestVersionName', 'latestVersionCode', 'updateNotes', 'updateUrl',
+                         'forceUpdate', 'enableDualSim', 'enableQuickTemplates',
+                         'enableQuietHours', 'enableBleGattBridge', 'updatedBy', 'updatedAt'
+                       ]) &&
+                       isValidAppConfig(incoming());
+      allow update: if isAdmin() &&
+                       isValidId(configId) &&
+                       isValidAppConfig(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'subscriptionRequired', 'monthlyPriceToman', 'yearlyPriceToman',
+                         'monthlyPriceLabel', 'yearlyPriceLabel',
+                         'freeTrialDays', 'paywallMessage', 'paymentUrl',
+                         'bankCards', 'cryptoWallets',
+                         'latestVersionName', 'latestVersionCode', 'updateNotes', 'updateUrl',
+                         'forceUpdate', 'enableDualSim', 'enableQuickTemplates',
+                         'enableQuietHours', 'enableBleGattBridge', 'updatedBy', 'updatedAt'
+                       ]);
+      allow delete: if false;
+    }
+
+    // Payment verification requests (/payment_requests/{requestId})
+    match /payment_requests/{requestId} {
+      allow get: if isSignedIn() && isValidId(requestId) &&
+                    (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() &&
+                     (existing().userId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'PENDING' &&
+                       (!('reviewedBy' in incoming()) || incoming().reviewedBy == '') &&
+                       (!('adminNote' in incoming()) || incoming().adminNote == '') &&
+                       incoming().keys().hasAll([
+                         'userId', 'userEmail', 'userDisplayName', 'requestedTier',
+                         'amountToman', 'paymentMethod', 'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'userEmail', 'userDisplayName', 'requestedTier',
+                         'amountToman', 'paymentMethod', 'targetAccountLabel',
+                         'trackingCode', 'receiptImageBase64', 'userNote',
+                         'status', 'adminNote', 'reviewedBy', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidPaymentRequest(incoming());
+      allow update: if isAdmin() &&
+                       isValidId(requestId) &&
+                       isValidPaymentRequest(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().requestedTier == existing().requestedTier &&
+                       incoming().amountToman == existing().amountToman &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().status in ['APPROVED', 'REJECTED'] &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'status', 'adminNote', 'reviewedBy', 'updatedAt'
+                       ]);
+      allow delete: if isValidId(requestId) &&
+                       (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid && existing().status == 'PENDING'));
+    }
+
+    // Dynamic modules, feature updates, and announcements
+    match /announcements/{announcementId} {
+      allow get: if isSignedIn() && isValidId(announcementId) &&
+                    (existing().published == true || isAdmin());
+      // No get()/exists() in allow list; uses JWT email check for admin drafts
+      allow list: if isSignedIn() &&
+                     (existing().published == true || isBootstrappedAdmin());
+      allow create: if isAdmin() &&
+                       isValidId(announcementId) &&
+                       incoming().createdBy == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'title', 'summary', 'category', 'published',
+                         'createdBy', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'title', 'summary', 'category', 'actionLabel', 'actionValue',
+                         'published', 'createdBy', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidAnnouncement(incoming());
+      allow update: if isAdmin() &&
+                       isValidId(announcementId) &&
+                       isValidAnnouncement(incoming()) &&
+                       incoming().createdBy == existing().createdBy &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'title', 'summary', 'category', 'actionLabel',
+                         'actionValue', 'published', 'updatedAt'
+                       ]);
+      allow delete: if isAdmin() && isValidId(announcementId);
+    }
+
+    // User profiles & subscription entitlements
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) &&
+                    (request.auth.uid == userId || isAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().hasActiveSubscription == false &&
+                       incoming().subscriptionTier == 'FREE' &&
+                       incoming().keys().hasAll([
+                         'userId', 'email', 'displayName', 'sim1Label', 'sim2Label',
+                         'hasActiveSubscription', 'subscriptionTier', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'email', 'displayName', 'photoUrl', 'sim1Label', 'sim2Label',
+                         'hasActiveSubscription', 'subscriptionTier', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming());
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+                           'hasActiveSubscription', 'subscriptionTier', 'subscriptionExpiresAtMillis',
+                           'renewalNoticeMessage', 'renewalNoticeAtMillis', 'updatedAt'
+                         ])) ||
+                         (request.auth.uid == userId &&
+                           incoming().hasActiveSubscription == existing().hasActiveSubscription &&
+                           incoming().subscriptionTier == existing().subscriptionTier &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'displayName', 'email', 'photoUrl', 'sim1Label', 'sim2Label', 'updatedAt'
+                           ])
+                         )
+                       );
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    // Admin roster
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) &&
+                    (request.auth.uid == adminUid || isBootstrappedAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create, update: if isBootstrappedAdmin() &&
+                               isValidId(adminUid) &&
+                               incoming().keys().hasAll(['email', 'createdAt']) &&
+                               incoming().keys().hasOnly(['email', 'createdAt']) &&
+                               isValidAdminRecord(incoming());
+      allow delete: if isBootstrappedAdmin() && isValidId(adminUid);
+    }
+  }
+}

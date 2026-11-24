@@ -1,0 +1,287 @@
+{
+  "entities": {
+    "BankCardInfo": {
+      "title": "BankCardInfo",
+      "description": "Admin-configured bank card details for card-to-card subscription payments.",
+      "type": "object",
+      "properties": {
+        "bankName": { "type": "string", "description": "Bank name (e.g. ملت / سامان)." },
+        "cardNumber": { "type": "string", "description": "16-digit bank card number." },
+        "holderName": { "type": "string", "description": "Account holder full name." }
+      },
+      "required": ["bankName", "cardNumber", "holderName"]
+    },
+    "CryptoWalletInfo": {
+      "title": "CryptoWalletInfo",
+      "description": "Admin-configured cryptocurrency wallet details for subscription payments.",
+      "type": "object",
+      "properties": {
+        "networkName": { "type": "string", "description": "Coin & network label (e.g. USDT TRC20, TON, BTC)." },
+        "address": { "type": "string", "description": "Public wallet deposit address." }
+      },
+      "required": ["networkName", "address"]
+    },
+    "AppGlobalConfig": {
+      "title": "AppGlobalConfig",
+      "description": "Global application configuration controlled from the no-code Admin Panel for subscription gating, Toman pricing, payment accounts, updates, and feature flags.",
+      "type": "object",
+      "properties": {
+        "subscriptionRequired": {
+          "type": "boolean",
+          "description": "When false the app is free for all users; when true users require an active subscription."
+        },
+        "monthlyPriceToman": {
+          "type": "integer",
+          "description": "Monthly subscription price in Iranian Toman."
+        },
+        "yearlyPriceToman": {
+          "type": "integer",
+          "description": "Yearly subscription price in Iranian Toman."
+        },
+        "monthlyPriceLabel": {
+          "type": "string",
+          "description": "Display label for monthly subscription price."
+        },
+        "yearlyPriceLabel": {
+          "type": "string",
+          "description": "Display label for yearly subscription price."
+        },
+        "freeTrialDays": {
+          "type": "integer",
+          "description": "Number of free trial days."
+        },
+        "paywallMessage": {
+          "type": "string",
+          "description": "Message shown to users when subscription mode is enabled."
+        },
+        "paymentUrl": {
+          "type": "string",
+          "description": "Optional external checkout or support URL for subscription purchase."
+        },
+        "bankCards": {
+          "type": "array",
+          "items": { "$ref": "#/entities/BankCardInfo" },
+          "description": "List of admin-managed bank cards."
+        },
+        "cryptoWallets": {
+          "type": "array",
+          "items": { "$ref": "#/entities/CryptoWalletInfo" },
+          "description": "List of admin-managed cryptocurrency wallets."
+        },
+        "latestVersionName": {
+          "type": "string",
+          "description": "Latest public version name."
+        },
+        "latestVersionCode": {
+          "type": "integer",
+          "description": "Latest public integer version code."
+        },
+        "updateNotes": {
+          "type": "string",
+          "description": "Release notes for the latest update."
+        },
+        "updateUrl": {
+          "type": "string",
+          "description": "Store or release page URL opened via Intent.ACTION_VIEW."
+        },
+        "forceUpdate": {
+          "type": "boolean",
+          "description": "Whether the update banner emphasizes immediate update."
+        },
+        "enableDualSim": {
+          "type": "boolean",
+          "description": "Feature flag for Dual-SIM selector."
+        },
+        "enableQuickTemplates": {
+          "type": "boolean",
+          "description": "Feature flag for quick SMS reply templates."
+        },
+        "enableQuietHours": {
+          "type": "boolean",
+          "description": "Feature flag for bridge Do Not Disturb quiet hours."
+        },
+        "enableBleGattBridge": {
+          "type": "boolean",
+          "description": "Feature flag for live BLE GATT + RFCOMM bridge."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "Admin UID or email that last updated config."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update."
+        }
+      },
+      "required": [
+        "subscriptionRequired",
+        "monthlyPriceToman",
+        "yearlyPriceToman",
+        "monthlyPriceLabel",
+        "yearlyPriceLabel",
+        "freeTrialDays",
+        "paywallMessage",
+        "latestVersionName",
+        "latestVersionCode",
+        "forceUpdate",
+        "enableDualSim",
+        "enableQuickTemplates",
+        "enableQuietHours",
+        "enableBleGattBridge",
+        "updatedBy",
+        "updatedAt"
+      ]
+    },
+    "PaymentRequest": {
+      "title": "PaymentRequest",
+      "description": "Manual payment verification request submitted by a user with tracking code and/or receipt image, reviewed by admin.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Submitting user's Auth UID." },
+        "userEmail": { "type": "string", "description": "Submitting user's email." },
+        "userDisplayName": { "type": "string", "description": "Submitting user's display name." },
+        "requestedTier": {
+          "type": "string",
+          "enum": ["MONTHLY", "YEARLY"],
+          "description": "Requested subscription tier."
+        },
+        "amountToman": { "type": "integer", "description": "Paid amount in Toman." },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["CARD_TO_CARD", "CRYPTO", "GATEWAY"],
+          "description": "Payment channel used."
+        },
+        "targetAccountLabel": { "type": "string", "description": "Destination card or wallet label." },
+        "trackingCode": { "type": "string", "description": "Bank tracking code or crypto transaction hash." },
+        "receiptImageBase64": { "type": "string", "description": "Compressed JPEG Base64 receipt preview." },
+        "userNote": { "type": "string", "description": "Optional note from user." },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING", "APPROVED", "REJECTED"],
+          "description": "Verification status managed by admin."
+        },
+        "adminNote": { "type": "string", "description": "Optional review note from admin." },
+        "reviewedBy": { "type": "string", "description": "UID of reviewing admin." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "userEmail",
+        "userDisplayName",
+        "requestedTier",
+        "amountToman",
+        "paymentMethod",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AnnouncementModule": {
+      "title": "AnnouncementModule",
+      "description": "Dynamic feature card, announcement, tip, or update item published by admin without coding.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Card title." },
+        "summary": { "type": "string", "description": "Card description body." },
+        "category": {
+          "type": "string",
+          "enum": ["FEATURE", "UPDATE", "TIP", "USSD"],
+          "description": "Module category badge."
+        },
+        "actionLabel": { "type": "string", "description": "Optional action button text." },
+        "actionValue": { "type": "string", "description": "Optional external URL or dial code." },
+        "published": { "type": "boolean", "description": "Whether visible to general users." },
+        "createdBy": { "type": "string", "description": "Creator admin UID." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "summary",
+        "category",
+        "published",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile, SIM labels, and server-managed subscription entitlement.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID." },
+        "email": { "type": "string", "description": "User email address." },
+        "displayName": { "type": "string", "description": "User display name." },
+        "photoUrl": { "type": "string", "description": "User avatar URL." },
+        "sim1Label": { "type": "string", "description": "Custom label for SIM 1." },
+        "sim2Label": { "type": "string", "description": "Custom label for SIM 2." },
+        "hasActiveSubscription": { "type": "boolean", "description": "Subscription status managed by admin." },
+        "subscriptionTier": {
+          "type": "string",
+          "enum": ["FREE", "MONTHLY", "YEARLY", "LIFETIME"],
+          "description": "Current subscription tier."
+        },
+        "subscriptionExpiresAtMillis": {
+          "type": "integer",
+          "description": "Epoch millis when current paid subscription expires (0 for FREE or LIFETIME)."
+        },
+        "renewalNoticeMessage": {
+          "type": "string",
+          "description": "Latest renewal reminder notification message sent by admin."
+        },
+        "renewalNoticeAtMillis": {
+          "type": "integer",
+          "description": "Timestamp in millis of the latest admin renewal reminder."
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "email",
+        "displayName",
+        "sim1Label",
+        "sim2Label",
+        "hasActiveSubscription",
+        "subscriptionTier",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Admin authorization record.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "Admin email." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/app_config/{configId}": {
+      "schema": { "$ref": "#/entities/AppGlobalConfig" },
+      "description": "Global config document (primarily /app_config/global)."
+    },
+    "/payment_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/PaymentRequest" },
+      "description": "User payment receipt & tracking code submissions for manual admin approval."
+    },
+    "/announcements/{announcementId}": {
+      "schema": { "$ref": "#/entities/AnnouncementModule" },
+      "description": "Dynamic feature announcements and modules published by admin."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profiles and subscription status."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Designated app administrators."
+    }
+  }
+}

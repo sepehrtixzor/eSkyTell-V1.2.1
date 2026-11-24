@@ -1,0 +1,8 @@
+{
+  "name": "eSkyTell",
+  "description": "پل ارتباطی هوشمند بلوتوثی برای تماس، پیامک، مخاطبین و همگام‌سازی گوشی دوم با طراحی اختصاصی و پنل مدیریت",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

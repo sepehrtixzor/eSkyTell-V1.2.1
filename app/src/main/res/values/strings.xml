@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">eSkyTell</string>
+    <string name="nav_phone">تلفن</string>
+    <string name="nav_messages">پیامک</string>
+    <string name="nav_bridge">پل بلوتوث</string>
+    <string name="nav_more">تنظیمات</string>
+    <string name="hero_title">پل هوشمند eSkyTell</string>
+    <string name="hero_subtitle">تماس، پیامک و مخاطبین گوشی دوم روی خط بلوتوثی امن و مستقیم</string>
+    <string name="bt_status_on">بلوتوث فعال</string>
+    <string name="bt_status_off">بلوتوث خاموش</string>
+    <string name="bt_status_unsupported">سخت‌افزار بلوتوث در دسترس نیست</string>
+    <string name="bt_enable_action">روشن کردن بلوتوث</string>
+    <string name="bt_grant_permission">اعطای دسترسی بلوتوث</string>
+    <string name="bt_scan_start">جستجوی دستگاه‌ها</string>
+    <string name="bt_scan_stop">توقف جستجو</string>
+    <string name="bt_receive_mode">آماده دریافت</string>
+    <string name="bt_receive_stop">توقف دریافت</string>
+    <string name="iphone_guide_title">راهنمای اتصال آیفون به eSkyTell</string>
+    <string name="sign_in_google">ورود با حساب گوگل</string>
+</resources>
