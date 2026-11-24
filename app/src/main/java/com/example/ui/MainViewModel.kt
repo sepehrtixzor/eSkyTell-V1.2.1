@@ -103,7 +103,8 @@ data class MainUiState(
     val renewalNotificationsEnabled: Boolean = true,
     val autoReconnectEnabled: Boolean = true,
     val relayDeviceRole: RelayDeviceRole = RelayDeviceRole.PRIMARY,
-    val relayConnectionState: RelayConnectionState = RelayConnectionState.Disconnected
+    val relayConnectionState: RelayConnectionState = RelayConnectionState.Disconnected,
+    val isRefreshing: Boolean = false
 ) {
     val allKnownDevices: List<DiscoveredBluetoothDevice>
         get() = (pairedDevices + nearbyDevices).distinctBy { it.address }
@@ -176,6 +177,7 @@ class MainViewModel(
     private val _isCloudSaving = MutableStateFlow(false)
     private val _showPaywallSheet = MutableStateFlow(false)
     private val _renewalNotificationsEnabled = MutableStateFlow(notificationManager.isRenewalReminderEnabled())
+    private val _isRefreshing = MutableStateFlow(false)
 
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
@@ -359,7 +361,8 @@ class MainViewModel(
         localDataFlow,
         dialerAndCallFlow,
         bridgePrefsFlow,
-        cloudTupleFlow
+        cloudTupleFlow,
+        _isRefreshing
     ) { args ->
         val bt = args[0] as BtStatusTuple
         val devices = args[1] as BtDevicesTuple
@@ -367,6 +370,7 @@ class MainViewModel(
         val dialer = args[3] as DialerTuple
         val prefs = args[4] as BridgePrefsTuple
         val cloud = args[5] as CloudTuple
+        val refreshing = args[6] as Boolean
 
         val contactNamesByPhone = local.contacts.associate {
             normalizePhoneKey(it.phoneNumber) to it.displayName
@@ -437,7 +441,8 @@ class MainViewModel(
             renewalNotificationsEnabled = _renewalNotificationsEnabled.value,
             autoReconnectEnabled = devices.autoReconnectEnabled,
             relayDeviceRole = devices.relayRole,
-            relayConnectionState = devices.relayState
+            relayConnectionState = devices.relayState,
+            isRefreshing = refreshing
         )
     }.stateIn(
         scope = viewModelScope,
@@ -907,6 +912,23 @@ class MainViewModel(
     // --- Bluetooth Scanning, Bridge Server & Transfers ---
     fun refreshBluetoothStatus() {
         bluetoothManager.refreshStatus()
+    }
+
+    fun syncFromPairedDevice() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            bluetoothManager.refreshStatus()
+            repository.importDeviceContacts()
+            val activeDevice = uiState.value.activeBridgeDevice
+            if (activeDevice != null) {
+                bluetoothManager.pairDevice(activeDevice.address)
+                _snackbarMessage.value = "همگام‌سازی از «${activeDevice.name}» انجام شد."
+            } else {
+                _snackbarMessage.value = "وضعیت پل بلوتوث و مخاطبین محلی به‌روز شد."
+            }
+            kotlinx.coroutines.delay(800L)
+            _isRefreshing.value = false
+        }
     }
 
     fun toggleScan() {

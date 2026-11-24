@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.AddComment
+import androidx.compose.material.icons.rounded.BluetoothConnected
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.DeleteOutline
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -89,6 +91,8 @@ fun MessagesScreen(
     onImportFileClick: () -> Unit,
     onAddManualSms: (sender: String, phone: String, body: String, direction: SmsDirection) -> Unit,
     onImportPastedText: (String) -> Unit,
+    onRefreshSync: () -> Unit = {},
+    isRefreshing: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val selectedPhone = uiState.selectedSmsThreadPhone
@@ -212,6 +216,19 @@ fun MessagesScreen(
                         Icon(Icons.Rounded.Sms, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("ثبت پیامک دریافتی")
+                    }
+                    OutlinedButton(
+                        onClick = onRefreshSync,
+                        enabled = !isRefreshing,
+                        modifier = Modifier.minimumInteractiveComponentSize().testTag("messages_sync_btn")
+                    ) {
+                        if (isRefreshing) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Rounded.BluetoothConnected, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("همگام‌سازی و تازه‌سازی")
+                        }
                     }
                 }
             }

@@ -50,6 +50,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -119,6 +120,8 @@ fun PhoneScreen(
     onRequestContactsPermission: () -> Unit,
     onSaveContactToPhone: (ContactEntity) -> Unit,
     onShareContactsBluetooth: (List<ContactEntity>) -> Unit,
+    onRefreshSync: () -> Unit = {},
+    isRefreshing: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var phoneSubTab by remember { mutableIntStateOf(0) } // 0=Keypad, 1=Recents, 2=Contacts
@@ -284,6 +287,8 @@ fun PhoneScreen(
                     onSaveContactToPhone = onSaveContactToPhone,
                     onEditContact = { editingContact = it },
                     onDeleteContact = onDeleteContact,
+                    onRefreshSync = onRefreshSync,
+                    isRefreshing = isRefreshing,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -764,6 +769,8 @@ private fun ContactsPane(
     onSaveContactToPhone: (ContactEntity) -> Unit,
     onEditContact: (ContactEntity) -> Unit,
     onDeleteContact: (Long) -> Unit,
+    onRefreshSync: () -> Unit,
+    isRefreshing: Boolean,
     modifier: Modifier = Modifier
 ) {
     var search by remember { mutableStateOf("") }
@@ -813,6 +820,19 @@ private fun ContactsPane(
                         Icon(Icons.Rounded.Bluetooth, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("ارسال vCard")
+                    }
+                }
+                OutlinedButton(
+                    onClick = onRefreshSync,
+                    enabled = !isRefreshing,
+                    modifier = Modifier.minimumInteractiveComponentSize().testTag("contacts_sync_btn")
+                ) {
+                    if (isRefreshing) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Rounded.BluetoothConnected, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("همگام‌سازی و تازه‌سازی")
                     }
                 }
             }
